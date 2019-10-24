@@ -1,0 +1,94 @@
+#kubernates setup manually:- please reffer if any issue https://www.learnitguide.net/2018/08/install-and-configure-kubernetes-cluster.html
+
+#COMPUTE CONFIGURATION FOR NODES
+master:-centos7.3(64) 6 GB MEMORY
+WORKER1:-centos7.3(64) 6 GB MEMORY
+WORKER2:-centos7.3(64) 6 GB MEMORY
+
+#configure host/inventory  file 
+cat /etc/hosts
+192.168.2.1  kubernetes-master
+192.168.2.2  kubernetes-worker1
+192.168.2.3  kubernetes-worker2
+
+#KUBERNATES DONES NOT SUPPORT swap, please disable swap in all nodes
+
+$swapoff -a
+
+#all nodes
+#enable kubernates on repository and all worker nodes
+
+$ cat /etc/yum.repos.d/kubernetes.repo
+
+outpout:-
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+        https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+#install all required package in master and workers
+$ yum -y install docker kubeadm
+
+#start and enable docker and kubelet in all worker and master nodes
+systemctl start docker && systemctl enable docker
+systemctl start kubelet && systemctl enable kubelet
+
+
+#allow network port in firewall in master and worker(kubernates end port 6443 and listen port 10250)
+irewall-cmd --permanent --add-port=6443/tcp
+firewall-cmd --permanent --add-port=10250/tcp
+firewall-cmd --reload
+
+#set'1' to bridge firewall rule
+echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
+
+## if u get error no file found do below
+modprobe br_netfilter
+echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
+
+#initialize kubernates cluster in master node
+[root@kubernetes-master ~]# kubeadm init --apiserver-advertise-address 192.168.2.1 --pod-network-cidr=172.16.0.0/16
+
+output:-
+[init] using Kubernetes version: v1.11.2
+[preflight] running pre-flight checks
+        [WARNING Firewalld]: firewalld is active, please ensure ports [6443 10250] are open or your cluster may not function correctly
+I0811 21:10:04.905996   12195 kernel_validator.go:81] Validating kernel version
+---------continew
+
+
+#change configi=uration etc/kubernates/admin.config only on master node
+
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+#install network addon to communicate pod only on master
+
+[root@kubernetes-master ~]# kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+
+#  kubectl get nodes(no worker)
+out put
+NAME                STATUS    ROLES     AGE       VERSION
+kubernetes-master   Ready     master    14m       v1.11.1
+[root@kubernetes-master ~]#
+
+
+#generate token for worker to connect with master
+kubeadm join 192.168.2.1:6443 --token pxavv6.zwqgdlivwfgbaaud --discovery-token-ca-cert-hash 
+sha256:0cd1e77fd1514a6ec60e3c67c678c0d88ac80b18ff8184271ecef1ccdc01ee55(produced by hash table)
+
+#
+
+
+
+
+
+
+
+
