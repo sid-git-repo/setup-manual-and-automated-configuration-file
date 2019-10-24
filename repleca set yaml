@@ -1,0 +1,56 @@
+#this replica set for creating pods with desired state and container specification and metadata 
+
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: frontend/backend
+  labels:
+    app: guestbook
+    tier: frontend
+spec:
+  # modify replicas according to your case
+  replicas: 3
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: frontend
+    spec:
+      containers:
+      - name: php-redis
+        image: gcr.io/google_samples/gb-frontend:v3
+ #execute yml file with help of kubectl       
+kubectl apply -f https://kubernetes.io/examples/controllers/frontend.yaml
+
+#GETTING REPLICA SET
+  kubectl get rs
+ #out_put  we want 3 re[plica thats why 3
+ NAME       DESIRED   CURRENT   READY   AGE
+frontend   3         3         3       6s
+
+#descripbe fromntend means details abot replica for frontend
+
+kubectl describe rs/frontend
+#get pods
+kubectl get Pods
+kubectl get pods frontend-9si5l -o yaml
+
+#ReplicaSet as a Horizontal Pod Autoscaler Target
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-scaler
+spec:
+  scaleTargetRef:
+    kind: ReplicaSet
+    name: frontend
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 50
+  
+  
+
+
