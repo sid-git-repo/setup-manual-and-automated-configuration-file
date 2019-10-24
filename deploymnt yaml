@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80
+
+kubectl apply -f https://k8s.io/examples/controllers/nginx-deployment.yaml
+When you inspect the Deployments in your cluster, the following fields are displayed:
+NAME lists the names of the Deployments in the cluster.
+DESIRED displays the desired number of replicas of the application, which you define when you create the Deployment. This is the desired state.
+CURRENT displays how many replicas are currently running.
+UP-TO-DATE displays the number of replicas that have been updated to achieve the desired state.
+AVAILABLE displays how many replicas of the application are available to your users.
+AGE displays the amount of time that the application has been running.
+
+Follow the steps given below to update your Deployment:
+Let’s update the nginx Pods to use the nginx:1.9.1 image instead of the nginx:1.7.9 image.
+kubectl --record deployment.apps/nginx-deployment set image deployment.v1.apps/nginx-deployment nginx=nginx:1.9.1  
+or
+kubectl set image deployment/nginx-deployment nginx=nginx:1.91 --record
+
+
+To see the rollout status, run:
+kubectl rollout status deployment.v1.apps/nginx-deployment
+
+
+Run kubectl get rs to see that the Deployment updated the Pods by creating a new ReplicaSet and scaling it up to 3 replicas, as well as scaling down the old ReplicaSet to 0 replicas.
+kubectl get rs
+
+Suppose that you made a typo while updating the Deployment, by putting the image name as nginx:1.91 instead of nginx:1.9.1:
+kubectl set image deployment.v1.apps/nginx-deployment nginx=nginx:1.91 --record=true
+
+First, check the revisions of this Deployment:
+kubectl rollout history deployment.v1.apps/nginx-deployment
+
+Now you’ve decided to undo the current rollout and rollback to the previous revision:
+kubectl rollout undo deployment.v1.apps/nginx-deployment
+
+Alternatively, you can rollback to a specific revision by specifying it with --to-revision:
+kubectl rollout undo deployment.v1.apps/nginx-deployment --to-revision=2
+
+Check if the rollback was successful and the Deployment is running as expected, run:
+kubectl get deployment nginx-deployment
+
+You can scale a Deployment by using the following command:
+kubectl scale deployment.v1.apps/nginx-deployment --replicas=10
+
+Assuming horizontal Pod autoscaling is enabled in your cluster, you can setup an autoscaler for your Deployment and choose the minimum and maximum number of Pods you want to run based on the CPU utilization of your existing Pods.
+kubectl autoscale deployment.v1.apps/nginx-deployment --min=10 --max=15 --cpu-percent=80
+
+You update to a new image which happens to be unresolvable from inside the cluster.
+kubectl set image deployment.v1.apps/nginx-deployment nginx=nginx:sometag
+
+Pause by running the following command:
+kubectl rollout pause deployment.v1.apps/nginx-deployment
+
+Watch the status of the rollout until it’s done.
+kubectl get rs -w
+
+
+
+
